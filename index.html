@@ -105,6 +105,32 @@
   #log::-webkit-scrollbar { width: 8px; }
   #log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
   #log::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+
+  /* Progress Bar */
+  #progressBarContainer {
+    margin-top: 20px;
+    width: 100%;
+    background: #ddd;
+    border-radius: 25px;
+    height: 20px;
+  }
+
+  #progressBar {
+    height: 100%;
+    width: 0%;
+    background-color: #4caf50;
+    border-radius: 25px;
+    transition: width 0.3s ease;
+  }
+
+  #progressLabel {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
@@ -121,6 +147,11 @@
 </div>
 
 <div id="status"></div>
+
+<div id="progressBarContainer">
+  <div id="progressBar"></div>
+  <div id="progressLabel">0%</div>
+</div>
 
 <div id="captcha-container">
   <div id="captcha-root-0"></div>
@@ -144,6 +175,8 @@ const statusEl = document.getElementById("status");
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
 const downloadBtn = document.getElementById("downloadBtn");
+const progressBar = document.getElementById("progressBar");
+const progressLabel = document.getElementById("progressLabel");
 
 function appendLog(text, cls) {
   const time = new Date().toLocaleTimeString();
@@ -152,6 +185,12 @@ function appendLog(text, cls) {
   if(cls) div.className = cls;
   logEl.appendChild(div);
   logEl.scrollTop = logEl.scrollHeight;
+}
+
+function updateProgressBar() {
+  const progress = ((combos.length - validAccounts.length) / combos.length) * 100;
+  progressBar.style.width = `${progress}%`;
+  progressLabel.textContent = `${Math.round(progress)}%`;
 }
 
 function parseCombos(text) {
@@ -268,6 +307,7 @@ async function checkOneAccount(account, index) {
   } catch(e) {
     appendLog(`Error pengecekan ${account.email}: ${e}`, "bad");
   }
+  updateProgressBar();
 }
 
 function updateTextareaCombos() {
